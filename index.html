@@ -1,0 +1,624 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寶可夢訓練家 - 作品集入口網站</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --pkmn-red: #EE1515;
+            --pkmn-dark-red: #B30000;
+            --pkmn-yellow: #FFDE00;
+            --pkmn-gold: #B3A125;
+            --pkmn-blue: #3B4CCA;
+            --pkmn-dark-blue: #2A3284;
+            --pkmn-bg-green: #7AC74C;
+            --pkmn-dark-green: #4A8522;
+            --pkmn-box-bg: #F8F9FA;
+            --pkmn-dark-bg: #1e252f;
+            --pixel-border-color: #222222;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Noto Sans TC', 'Press Start 2P', sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #8cbe43;
+            background-image: 
+                radial-gradient(#a3d656 15%, transparent 16%),
+                radial-gradient(#a3d656 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+            color: #333;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        .game-container {
+            width: 100%;
+            max-width: 1000px;
+            background-color: #e6f3d8;
+            border: 6px solid var(--pixel-border-color);
+            border-radius: 16px;
+            box-shadow: 
+                0 12px 0 rgba(0,0,0,0.3),
+                inset 0 0 0 4px #ffffff,
+                inset 0 0 0 8px #a8d870;
+            padding: 30px 20px;
+            position: relative;
+            z-index: 10;
+        }
+
+        .trainer-card {
+            background: #ffffff;
+            border: 4px solid var(--pixel-border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            box-shadow: 6px 6px 0px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .trainer-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 12px;
+            background: linear-gradient(90deg, var(--pkmn-red) 50%, #ffffff 50%);
+            border-bottom: 3px solid var(--pixel-border-color);
+        }
+
+        .avatar-container {
+            position: relative;
+            width: 110px;
+            height: 110px;
+            margin-top: 10px;
+            margin-bottom: 12px;
+        }
+
+        .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            border: 4px solid var(--pixel-border-color);
+            background-color: #f0f8ff;
+            object-fit: cover;
+            image-rendering: pixelated;
+            box-shadow: 0 4px 0 rgba(0,0,0,0.1);
+        }
+
+        .badge-icon {
+            position: absolute;
+            bottom: -2px;
+            right: -2px;
+            background: var(--pkmn-yellow);
+            border: 2px solid var(--pixel-border-color);
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            color: var(--pkmn-red);
+            box-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+            animation: pulse 2s infinite;
+        }
+
+        .trainer-info {
+            text-align: center;
+            width: 100%;
+        }
+
+        .trainer-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 11px;
+            color: var(--pkmn-blue);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+
+        .trainer-name {
+            font-size: 24px;
+            font-weight: 900;
+            color: #222;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 0 #fff, 2px 2px 0 #ccc;
+        }
+
+        /* 經驗值條 (EXP Bar) */
+        .exp-container {
+            width: 80%;
+            max-width: 320px;
+            margin: 0 auto 12px auto;
+            background: #444;
+            border: 2px solid var(--pixel-border-color);
+            border-radius: 10px;
+            padding: 3px;
+            position: relative;
+        }
+
+        .exp-bar {
+            height: 12px;
+            width: 12.5%; /* 16關完成了2關 = 2/16 = 12.5% */
+            background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+            border-radius: 6px;
+            transition: width 1s ease-in-out;
+            position: relative;
+        }
+
+        .exp-text {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            color: #fff;
+            position: absolute;
+            top: -18px;
+            right: 0;
+            text-shadow: 1px 1px 0 #000;
+        }
+
+        .stats-badges {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #555;
+            margin-top: 5px;
+        }
+
+        .stat-item {
+            background: #f0f0f0;
+            padding: 4px 10px;
+            border-radius: 20px;
+            border: 2px solid #ddd;
+        }
+
+        .menu-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 16px;
+            color: var(--pkmn-dark-blue);
+            text-align: center;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 0 var(--pkmn-yellow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 16px;
+        }
+
+        .stage-btn {
+            display: flex;
+            align-items: center;
+            padding: 14px 16px;
+            border-radius: 10px;
+            text-decoration: none;
+            position: relative;
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 3px solid var(--pixel-border-color);
+            box-shadow: 0 5px 0 var(--pixel-border-color);
+            overflow: hidden;
+        }
+
+        /* 1. 已解鎖按鈕樣式 (Unlocked) */
+        .stage-btn.unlocked {
+            background: linear-gradient(135deg, #ffffff 0%, #fff9d6 100%);
+            color: #222;
+        }
+
+        .stage-btn.unlocked:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 9px 0 var(--pixel-border-color);
+            background: linear-gradient(135deg, #ffffff 0%, #ffee7c 100%);
+        }
+
+        .stage-btn.unlocked:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 0 var(--pixel-border-color);
+        }
+
+        /* 精靈球圖示旋轉效果 */
+        .pokeball-icon {
+            width: 28px;
+            height: 28px;
+            margin-right: 12px;
+            flex-shrink: 0;
+            transition: transform 0.4s ease;
+        }
+
+        .stage-btn.unlocked:hover .pokeball-icon {
+            transform: rotate(360deg) scale(1.15);
+        }
+
+        .stage-info {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+        }
+
+        .stage-tag {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 9px;
+            color: var(--pkmn-red);
+            margin-bottom: 4px;
+            font-weight: bold;
+        }
+
+        .stage-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: #333;
+            line-height: 1.2;
+        }
+
+        /* 閃爍勳章 / 評分 */
+        .star-badge {
+            margin-left: auto;
+            color: #ffb703;
+            font-size: 14px;
+            animation: sparkle 1.5s infinite alternate;
+        }
+
+        /* 2. 未解鎖按鈕樣式 (Locked) */
+        .stage-btn.locked {
+            background: #d0d7de;
+            color: #7a869a;
+            border-color: #57606a;
+            box-shadow: 0 4px 0 #57606a;
+            cursor: not-allowed;
+            opacity: 0.85;
+        }
+
+        .stage-btn.locked .stage-tag {
+            color: #6e7781;
+        }
+
+        .stage-btn.locked .stage-name {
+            color: #6e7781;
+        }
+
+        .lock-icon {
+            font-size: 20px;
+            margin-right: 12px;
+            color: #57606a;
+            transition: transform 0.2s ease;
+        }
+
+        .stage-btn.locked:hover .lock-icon {
+            animation: keyShake 0.4s ease-in-out;
+        }
+
+        /* 點擊未解鎖時的拒絕震動效果 */
+        .shake-animation {
+            animation: errorShake 0.4s ease-in-out !important;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes sparkle {
+            0% { opacity: 0.5; transform: scale(0.9); }
+            100% { opacity: 1; transform: scale(1.2); }
+        }
+
+        @keyframes keyShake {
+            0%, 100% { transform: rotate(0deg); }
+            20% { transform: rotate(-12deg); }
+            40% { transform: rotate(12deg); }
+            60% { transform: rotate(-8deg); }
+            80% { transform: rotate(8deg); }
+        }
+
+        @keyframes errorShake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-8px); }
+            40% { transform: translateX(8px); }
+            60% { transform: translateX(-5px); }
+            80% { transform: translateX(5px); }
+        }
+
+        .footer-note {
+            margin-top: 30px;
+            text-align: center;
+            background: #222;
+            color: #fff;
+            padding: 12px;
+            border-radius: 8px;
+            border: 3px solid var(--pixel-border-color);
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .dialog-arrow {
+            width: 0;
+            height: 0;
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 8px solid #fff;
+            display: inline-block;
+            animation: bounce 0.8s infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(4px); }
+        }
+
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            .game-container {
+                padding: 18px 12px;
+            }
+            .menu-grid {
+                grid-template-columns: 1fr; /* 手機版單欄排列，方便大面積觸控 */
+            }
+            .trainer-name {
+                font-size: 20px;
+            }
+            .menu-title {
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="game-container">
+       <div class="trainer-card">
+            <div class="avatar-container">
+                <!-- 大頭貼：預設像素風/寶可夢訓練家風格 placeholder (可替換為個人照片) -->
+                <img src="https://api.dicebear.com/7.x/pixel-art/svg?seed=AshPokemonMaster" alt="訓練家大頭貼" class="avatar" id="trainerAvatar">
+                <div class="badge-icon" title="大師徽章">
+                    <i class="fa-solid fa-crown"></i>
+                </div>
+            </div>
+
+            <div class="trainer-info">
+                <div class="trainer-title">PKMN TRAINER PORTFOLIO</div>
+                <h1 class="trainer-name">寶可夢大師 · 網頁作品集</h1>
+                
+                <!-- 完成度經驗值條 -->
+                <div class="exp-container">
+                    <span class="exp-text">EXP 2/16</span>
+                    <div class="exp-bar"></div>
+                </div>
+
+                <div class="stats-badges">
+                    <span class="stat-item"><i class="fa-solid fa-trophy" style="color:#ffb703;"></i> 解鎖: 2/16</span>
+                    <span class="stat-item"><i class="fa-solid fa-bolt" style="color:#ee1515;"></i> 等級: LV. 2</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 關卡選單標題 -->
+        <div class="menu-title">
+            <svg width="20" height="20" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="#EE1515" stroke="#222" stroke-width="8"/>
+                <path d="M 5 50 A 45 45 0 0 0 95 50 Z" fill="#FFFFFF" stroke="#222" stroke-width="8"/>
+                <line x1="5" y1="50" x2="95" y2="50" stroke="#222" stroke-width="8"/>
+                <circle cx="50" cy="50" r="14" fill="#FFFFFF" stroke="#222" stroke-width="6"/>
+            </svg>
+            CHALLENGE STAGES (關卡列表)
+        </div>
+
+        <div class="menu-grid">
+
+            <!-- 按鈕 1：已解鎖 -> w1/index.html -->
+            <a href="w1/index.html" class="stage-btn unlocked" title="進入 Week 1">
+                <svg class="pokeball-icon" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#EE1515" stroke="#222" stroke-width="8"/>
+                    <path d="M 5 50 A 45 45 0 0 0 95 50 Z" fill="#FFFFFF" stroke="#222" stroke-width="8"/>
+                    <line x1="5" y1="50" x2="95" y2="50" stroke="#222" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="14" fill="#FFFFFF" stroke="#222" stroke-width="6"/>
+                </svg>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 01</span>
+                    <span class="stage-name">數位名片</span>
+                </div>
+                <i class="fa-solid fa-star star-badge"></i>
+            </a>
+
+            <!-- 按鈕 2：已解鎖 -> w2/index.html -->
+            <a href="w2/index.html" class="stage-btn unlocked" title="進入 Week 2">
+                <svg class="pokeball-icon" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#EE1515" stroke="#222" stroke-width="8"/>
+                    <path d="M 5 50 A 45 45 0 0 0 95 50 Z" fill="#FFFFFF" stroke="#222" stroke-width="8"/>
+                    <line x1="5" y1="50" x2="95" y2="50" stroke="#222" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="14" fill="#FFFFFF" stroke="#222" stroke-width="6"/>
+                </svg>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 02</span>
+                    <span class="stage-name">今天吃甚麼?</span>
+                </div>
+                <i class="fa-solid fa-star star-badge"></i>
+            </a>
+
+            <!-- 按鈕 3 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(3, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 03</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 4 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(4, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 04</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 5 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(5, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 05</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 6 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(6, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 06</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 7 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(7, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 07</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 8 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(8, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 08</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 9 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(9, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 09</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 10 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(10, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 10</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 11 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(11, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 11</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 12 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(12, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 12</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 13 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(13, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 13</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 14 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(14, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 14</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 15 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(15, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 15</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+            <!-- 按鈕 16 -->
+            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(16, this)">
+                <span class="lock-icon">🔒</span>
+                <div class="stage-info">
+                    <span class="stage-tag">WEEK 16</span>
+                    <span class="stage-name">未解鎖關卡</span>
+                </div>
+            </a>
+
+        </div>
+
+        <div class="footer-note" id="statusMessage">
+            <span>大木博士：繼續完成後續課程以解鎖更多徽章！</span>
+            <span class="dialog-arrow"></span>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * 處理點擊未解鎖按鈕的互動
+         * @param {number} weekNum - 週次號碼
+         * @param {HTMLElement} element - 被點擊的按鈕元素
+         */
+        function handleLockedClick(weekNum, element) {
+            // 1. 新增震動動畫效果
+            element.classList.remove('shake-animation');
+            // 強制重繪以重新觸發動畫
+            void element.offsetWidth; 
+            element.classList.add('shake-animation');
+
+            // 2. 更新底部對話框訊息
+            const statusMessage = document.getElementById('statusMessage');
+            statusMessage.style.backgroundColor = '#EE1515';
+            statusMessage.innerHTML = `<span>⚠️ 關卡 Week ${weekNum} 尚未開放！請先完成前置作業。</span><span class="dialog-arrow"></span>`;
