@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>寶可夢迷因產生器 PokéMeme Generator</title>
+    
+    <!-- 引入 Google Fonts: Press Start 2P (像素風) 與 Noto Sans TC (繁體中文) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@700;900&family=Press+Start+2P&display=swap" rel="stylesheet">
+    
+    <!-- 引入 Tailwind CSS 快速打造響應式版面 -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- 引入 html2canvas 程式庫：用於把網頁區塊轉成圖片並下載 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+    <style>
+        /* 全域字型設定 */
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #dc0a2d; /* 經典圖鑑紅 (Pokédex Red) */
+            background-image: radial-gradient(#ff3355 15%, transparent 16%), radial-gradient(#b00020 15%, transparent 16%);
+            background-size: 30px 30px;
+            background-position: 0 0, 15px 15px;
+        }
+
+        .pixel-font {
+            font-family: 'Press Start 2P', cursive;
+        }
+
+        /* 寶可夢外框容器風格 */
+        .pokedex-screen {
+            background-color: #232323;
+            border: 12px solid #dedede;
+            border-radius: 20px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8), 0 10px 20px rgba(0,0,0,0.4);
+        }
+
+        /* 迷因文字的重黑邊文字效果 (Stroked text) */
+        .meme-text {
+            font-weight: 900;
+            color: white;
+            text-transform: uppercase;
+            text-shadow: 
+                3px 3px 0 #000, -3px -3px 0 #000,
+                3px -3px 0 #000, -3px 3px 0 #000,
+                0px 3px 0 #000,  0px -3px 0 #000,
+                3px 0px 0 #000, -3px 0px 0 #000,
+                2px 2px 5px rgba(0,0,0,0.8);
+            word-break: break-word;
+            line-height: 1.2;
+        }
+
+        /* 自訂寶可夢按鈕樣式 */
+        .pokeball-btn {
+            background: linear-gradient(180deg, #ee1515 48%, #222224 48%, #222224 52%, #f0f0f0 52%);
+            border: 4px solid #222224;
+            transition: all 0.2s ease;
+        }
+        .pokeball-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        }
+        .pokeball-btn:active {
+            transform: scale(0.97);
+        }
+
+        /* 精靈球中央按鈕圓點 */
+        .pokeball-center {
+            width: 24px;
+            height: 24px;
+            background: white;
+            border: 4px solid #222224;
+            border-radius: 50%;
+            box-shadow: inset 0 0 4px rgba(0,0,0,0.5);
+        }
+
+        /* 客製化 Range 滑桿風格 */
+        input[type=range] {
+            -webkit-appearance: none;
+            background: #4b5563;
+            height: 10px;
+            border-radius: 5px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            height: 22px;
+            width: 22px;
+            border-radius: 50%;
+            background: #facc15; /* 寶可夢皮卡丘黃 */
+            border: 3px solid #1f2937;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800 p-4 md:p-8 flex flex-col items-center justify-center">
+
+    <div class="max-w-5xl w-full bg-red-600 rounded-3xl p-4 md:p-6 shadow-2xl border-4 border-red-800 relative">
+        
+        <!-- 頂部圖鑑燈號裝飾 -->
+        <div class="flex items-center space-x-3 mb-6 pb-4 border-b-4 border-red-800">
+            <!-- 藍色主大燈 -->
+            <div class="w-12 h-12 md:w-16 md:h-16 bg-cyan-400 border-4 border-white rounded-full shadow-lg animate-pulse flex items-center justify-center">
+                <div class="w-4 h-4 bg-white rounded-full opacity-80 -mt-3 -ml-3"></div>
+            </div>
+            <!-- 三色小燈 -->
+            <div class="flex space-x-2">
+                <div class="w-4 h-4 bg-red-400 border-2 border-red-900 rounded-full"></div>
+                <div class="w-4 h-4 bg-yellow-300 border-2 border-yellow-800 rounded-full"></div>
+                <div class="w-4 h-4 bg-green-400 border-2 border-green-900 rounded-full"></div>
+            </div>
+            <!-- 標題 -->
+            <div class="ml-auto">
+                <h1 class="pixel-font text-yellow-300 text-xs sm:text-base md:text-xl tracking-wider text-right drop-shadow-[0_2px_0_rgba(0,0,0,1)]">
+                    POKÉ-MEME
+                </h1>
+                <p class="text-white text-xs font-bold text-right tracking-widest opacity-90">寶可夢迷因產生器</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            
+            <!-- 【左側：控制面板 Control Panel】 -->
+            <div class="lg:col-span-5 bg-amber-100 rounded-2xl p-4 md:p-5 border-4 border-amber-300 shadow-inner space-y-4">
+                <h2 class="text-lg font-black text-red-700 flex items-center space-x-2 border-b-2 border-amber-300 pb-2">
+                    <span>⚡</span>
+                    <span>訓練家控制台</span>
+                </h2>
+
+                <!-- 1. 上傳圖片按鈕 -->
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">選擇迷因底圖：</label>
+                    <label class="cursor-pointer flex items-center justify-center bg-white hover:bg-yellow-50 text-gray-800 font-bold py-2.5 px-4 border-2 border-gray-800 rounded-xl shadow transition">
+                        <svg class="w-5 h-5 mr-2 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span>從電腦選擇圖片...</span>
+                        <!-- 檔案輸入框 (預設隱藏，依靠外部 label 觸發) -->
+                        <input type="file" id="imageInput" accept="image/*" class="hidden">
+                    </label>
+                </div>
+
+                <!-- 2. 上方文字輸入 -->
+                <div>
+                    <label for="topTextInput" class="block text-sm font-bold text-gray-700 mb-1">上方文字 (Top Text)：</label>
+                    <input type="text" id="topTextInput" value="當你寫的 CODE" placeholder="輸入上方文字..." class="w-full px-3 py-2 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-bold">
+                </div>
+
+                <!-- 3. 下方文字輸入 -->
+                <div>
+                    <label for="bottomTextInput" class="block text-sm font-bold text-gray-700 mb-1">下方文字 (Bottom Text)：</label>
+                    <input type="text" id="bottomTextInput" value="一次就順利執行過的時候" placeholder="輸入下方文字..." class="w-full px-3 py-2 border-2 border-gray-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 font-bold">
+                </div>
+
+                <!-- 4. 文字顏色與字體大小 -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="textColor" class="block text-sm font-bold text-gray-700 mb-1">文字顏色：</label>
+                        <input type="color" id="textColor" value="#ffffff" class="w-full h-10 p-1 border-2 border-gray-800 rounded-lg cursor-pointer bg-white">
+                    </div>
+                    <div>
+                        <label for="fontSize" class="block text-sm font-bold text-gray-700 mb-1">字型大小: <span id="fontSizeVal">32</span>px</label>
+                        <input type="range" id="fontSize" min="16" max="72" value="32" class="w-full mt-2">
+                    </div>
+                </div>
+
+                <!-- 5. 上方文字垂直位置滑桿 -->
+                <div>
+                    <label for="topPos" class="block text-sm font-bold text-gray-700 mb-1">上方文字垂直位置：</label>
+                    <input type="range" id="topPos" min="0" max="40" value="5" class="w-full">
+                </div>
+
+                <!-- 6. 下方文字垂直位置滑桿 -->
+                <div>
+                    <label for="bottomPos" class="block text-sm font-bold text-gray-700 mb-1">下方文字垂直位置：</label>
+                    <input type="range" id="bottomPos" min="0" max="40" value="5" class="w-full">
+                </div>
+
+                <!-- 7. 一鍵下載按鈕 (精靈球樣式) -->
+                <div class="pt-2">
+                    <button id="downloadBtn" class="pokeball-btn w-full text-white font-black py-3 px-6 rounded-2xl flex items-center justify-between shadow-lg cursor-pointer">
+                        <span class="text-white drop-shadow-[0_2px_2px_rgba(0,0,0,1)] text-base md:text-lg">CAPTURE MEME! (下載圖檔)</span>
+                        <div class="pokeball-center flex items-center justify-center">
+                            <div class="w-2 h-2 bg-gray-800 rounded-full"></div>
+                        </div>
+                    </button>
+                </div>
+            </div>
+
+            <div class="lg:col-span-7 flex flex-col items-center justify-center">
+                
+                <!-- 外層寶可夢圖鑑螢幕框 -->
+                <div class="pokedex-screen w-full relative overflow-hidden flex items-center justify-center p-2 min-h-[350px]">
+                    
+                    <!-- 【重要】截圖區域 container (html2canvas 捕捉標的) -->
+                    <div id="memeContainer" class="relative overflow-hidden flex justify-center items-center rounded-lg bg-black max-w-full select-none">
+                        
+                        <!-- 迷因底圖 (預設為可達鴨 SVG 圖檔) -->
+                        <img id="memeImage" src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='600' height='500' viewBox='0 0 600 500'><rect width='100%' height='100%' fill='%23facc15'/><circle cx='300' cy='250' r='180' fill='%23eab308'/><ellipse cx='300' cy='290' rx='90' ry='50' fill='%23fef08a'/><ellipse cx='250' cy='200' rx='25' ry='35' fill='white'/><ellipse cx='350' cy='200' rx='25' ry='35' fill='white'/><circle cx='250' cy='200' r='8' fill='black'/><circle cx='350' cy='200' r='8' fill='black'/><path d='M210 280 Q300 350 390 280 Q300 290 210 280' fill='%23fde047' stroke='%23854d0e' stroke-width='4'/><path d='M 230 140 Q 210 80 180 60 M 300 130 Q 300 60 300 40 M 370 140 Q 390 80 420 60' stroke='black' stroke-width='6' fill='none' stroke-linecap='round'/></svg>" 
+                            alt="Meme Background" 
+                            class="max-w-full h-auto max-h-[500px] object-contain block">
+
+                        <!-- 上方文字圖層 -->
+                        <div id="topTextDisplay" class="meme-text absolute top-[5%] left-0 right-0 text-center px-4 pointer-events-none">
+                            當你寫的 CODE
+                        </div>
+
+                        <!-- 下方文字圖層 -->
+                        <div id="bottomTextDisplay" class="meme-text absolute bottom-[5%] left-0 right-0 text-center px-4 pointer-events-none">
+                            一次就順利執行過的時候
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 底部提示文字 -->
+                <p class="text-red-100 text-xs mt-3 text-center opacity-90 font-bold">
+                    💡 提示：點擊「CAPTURE MEME!」按鈕，即可將圖鑑畫面收服存成圖片！
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. 取得網頁上的 HTML 元素 (DOM 控制)
+        // ==========================================
+        const imageInput = document.getElementById('imageInput');
+        const memeImage = document.getElementById('memeImage');
+        const memeContainer = document.getElementById('memeContainer');
+
+        const topTextInput = document.getElementById('topTextInput');
+        const bottomTextInput = document.getElementById('bottomTextInput');
+        const topTextDisplay = document.getElementById('topTextDisplay');
+        const bottomTextDisplay = document.getElementById('bottomTextDisplay');
+
+        const textColor = document.getElementById('textColor');
+        const fontSize = document.getElementById('fontSize');
+        const fontSizeVal = document.getElementById('fontSizeVal');
+        const topPos = document.getElementById('topPos');
+        const bottomPos = document.getElementById('bottomPos');
+        const downloadBtn = document.getElementById('downloadBtn');
+
+        // ==========================================
+        // 2. 本機圖片上傳處理 (FileReader 避開 CORS)
+        // ==========================================
+        imageInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                // 使用 FileReader 讀取使用者本機檔案
+                const reader = new FileReader();
+                
+                reader.onload = function(event) {
+                    // 將讀取到的圖片轉為 Data URL (base64格式) 並賦予給 <img>
+                    memeImage.src = event.target.result;
+                };
+
+                // 開始以 Data URL 模式讀取檔案
+                reader.readAsDataURL(file);
+            }
+        });
+
+        // ==========================================
+        // 3. 即時文字與控制參數更新
+        // ==========================================
+        
+        // 更新上方文字
+        topTextInput.addEventListener('input', () => {
+            topTextDisplay.textContent = topTextInput.value;
+        });
+
+        // 更新下方文字
+        bottomTextInput.addEventListener('input', () => {
+            bottomTextDisplay.textContent = bottomTextInput.value;
+        });
+
+        // 更新文字顏色
+        textColor.addEventListener('input', () => {
+            topTextDisplay.style.color = textColor.value;
+            bottomTextDisplay.style.color = textColor.value;
+        });
+
+        // 更新字體大小
+        fontSize.addEventListener('input', () => {
+            const size = fontSize.value;
+            fontSizeVal.textContent = size;
+            topTextDisplay.style.fontSize = `${size}px`;
+            bottomTextDisplay.style.fontSize = `${size}px`;
+        });
+
+        // 微調上方文字垂直位置 (% 數)
+        topPos.addEventListener('input', () => {
+            topTextDisplay.style.top = `${topPos.value}%`;
+        });
+
+        // 微調下方文字垂直位置 (% 數)
+        bottomPos.addEventListener('input', () => {
+            bottomTextDisplay.style.bottom = `${bottomPos.value}%`;
+        });
+
+        // 初始化樣式
+        topTextDisplay.style.fontSize = `${fontSize.value}px`;
+        bottomTextDisplay.style.fontSize = `${fontSize.value}px`;
+
+        // ==========================================
+        // 4. 一鍵截圖並下載圖檔 (使用 html2canvas)
+        // ==========================================
+        downloadBtn.addEventListener('click', () => {
+            // 變更按鈕提示文字
+            const originalBtnHtml = downloadBtn.innerHTML;
+            downloadBtn.innerHTML = `<span class="text-yellow-300 font-bold animate-pulse">補捉迷因中...</span>`;
+
+            // 使用 html2canvas 捕捉 #memeContainer 區塊
+            html2canvas(memeContainer, {
+                scale: 2, // 提高解析度 (2倍清晰度)
+                useCORS: true, // 允許跨網域載入 (配合 FileReader 絕不塞車)
+                backgroundColor: null // 保持透明背景
+            }).then(canvas => {
+                // 將 Canvas 轉換成圖片 Data URL
+                const imageUrl = canvas.toDataURL('image/png');
+
+                // 建立一個隱藏的 <a> 標籤觸發下載
+                const downloadLink = document.createElement('a');
+                downloadLink.href = imageUrl;
+                downloadLink.download = 'my-pokemon-meme.png'; // 下載檔案名稱
+                document.body.appendChild(downloadLink);
+                downloadLink.click();
+                document.body.removeChild(downloadLink);
+
+                // 恢復按鈕原本樣式
+                downloadBtn.innerHTML = originalBtnHtml;
+            }).catch(err => {
+                console.error("截圖失敗：", err);
+                alert("產生圖檔時發生錯誤，請重試！");
+                downloadBtn.innerHTML = originalBtnHtml;
+            });
+        });
+    </script>
+</body>
+</html>
