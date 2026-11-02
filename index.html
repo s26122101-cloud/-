@@ -162,7 +162,7 @@
 
         .exp-bar {
             height: 12px;
-            width: 18.75%; /* 16關完成了3關 = 3/16 = 18.75% */
+            width: 25%; /* 16關完成了4關 = 4/16 = 25% */
             background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
             border-radius: 6px;
             transition: width 1s ease-in-out;
@@ -414,15 +414,15 @@
                 <div class="trainer-title">PKMN TRAINER PORTFOLIO</div>
                 <h1 class="trainer-name">寶可夢大師 · 網頁作品集</h1>
                 
-                <!-- 完成度經驗值條 (3/16 = 18.75%) -->
+                <!-- 完成度經驗值條 (4/16 = 25%) -->
                 <div class="exp-container">
-                    <span class="exp-text">EXP 3/16</span>
+                    <span class="exp-text">EXP 4/16</span>
                     <div class="exp-bar"></div>
                 </div>
 
                 <div class="stats-badges">
-                    <span class="stat-item"><i class="fa-solid fa-trophy" style="color:#ffb703;"></i> 解鎖: 3/16</span>
-                    <span class="stat-item"><i class="fa-solid fa-bolt" style="color:#ee1515;"></i> 等級: LV. 3</span>
+                    <span class="stat-item"><i class="fa-solid fa-trophy" style="color:#ffb703;"></i> 解鎖: 4/16</span>
+                    <span class="stat-item"><i class="fa-solid fa-bolt" style="color:#ee1515;"></i> 等級: LV. 4</span>
                 </div>
             </div>
         </div>
@@ -485,13 +485,19 @@
                 <i class="fa-solid fa-star star-badge"></i>
             </a>
 
-            <!-- 按鈕 4 -->
-            <a href="javascript:void(0)" class="stage-btn locked" onclick="handleLockedClick(4, this)">
-                <span class="lock-icon">🔒</span>
+            <!-- 按鈕 4：已解鎖 -> w4/index.html -->
+            <a href="w4/index.html" class="stage-btn unlocked" title="進入 Week 4">
+                <svg class="pokeball-icon" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="45" fill="#EE1515" stroke="#222" stroke-width="8"/>
+                    <path d="M 5 50 A 45 45 0 0 0 95 50 Z" fill="#FFFFFF" stroke="#222" stroke-width="8"/>
+                    <line x1="5" y1="50" x2="95" y2="50" stroke="#222" stroke-width="8"/>
+                    <circle cx="50" cy="50" r="14" fill="#FFFFFF" stroke="#222" stroke-width="6"/>
+                </svg>
                 <div class="stage-info">
                     <span class="stage-tag">WEEK 04</span>
-                    <span class="stage-name">未解鎖關卡</span>
+                    <span class="stage-name">悄悄話</span>
                 </div>
+                <i class="fa-solid fa-star star-badge"></i>
             </a>
 
             <!-- 按鈕 5 -->
