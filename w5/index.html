@@ -1,0 +1,936 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>雲端心電感應 - 寶可夢默契大考驗</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Google Fonts: Fredoka & Noto Sans TC -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Noto+Sans+TC:wght@500;700;900&display=swap" rel="stylesheet">
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            pokeBg: '#FAF6EE',         // Warm cream / beige background
+            pokeBgCard: '#FFFDF7',     // Lighter cream card surface
+            pokeYellow: '#FFCB05',     // Pikachu yellow
+            pokeYellowDark: '#D4A000',
+            pokeBlue: '#2A75BB',       // Pokémon logo blue
+            pokeBlueDark: '#1D4F7C',
+            pokeRed: '#EE1515',        // Pokéball red
+            pokeDark: '#2B2D42',       // Dark navy border/text
+          },
+          fontFamily: {
+            sans: ['Fredoka', 'Noto Sans TC', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    /* 3D Flip Card Styles */
+    .card-scene {
+      perspective: 1000px;
+    }
+    .card-object {
+      width: 100%;
+      height: 230px;
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .card-object.is-flipped {
+      transform: rotateY(180deg);
+    }
+    .card-face {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      border-radius: 1.25rem;
+    }
+    
+    /* Pokéball Card Back (Unrevealed State) */
+    .card-face-back {
+      background: linear-gradient(135deg, #EE1515 0%, #EE1515 48%, #2B2D42 48%, #2B2D42 52%, #FFFFFF 52%, #F3F4F6 100%);
+      border: 4px solid #2B2D42;
+    }
+
+    /* Revealed Front State */
+    .card-face-front {
+      transform: rotateY(180deg);
+      background: #FFFDF7;
+      border: 4px solid #FFCB05;
+    }
+
+    /* Pokéball Button Ornament */
+    .pokeball-center-btn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 46px;
+      height: 46px;
+      background-color: white;
+      border: 5px solid #2B2D42;
+      border-radius: 50%;
+      box-shadow: inset -2px -2px 0px rgba(0,0,0,0.15);
+      z-index: 10;
+    }
+    .pokeball-center-btn::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 16px;
+      height: 16px;
+      background-color: #FFCB05;
+      border: 3px solid #2B2D42;
+      border-radius: 50%;
+    }
+
+    /* Retro Pixel / Card Border Shadows */
+    .poke-shadow {
+      box-shadow: 6px 6px 0px 0px #2B2D42;
+    }
+    .poke-shadow-sm {
+      box-shadow: 4px 4px 0px 0px #2B2D42;
+    }
+    .poke-shadow-blue {
+      box-shadow: 6px 6px 0px 0px #2A75BB;
+    }
+
+    /* Pulse animation */
+    @keyframes pulseScale {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+    .animate-poke-pulse {
+      animation: pulseScale 2s infinite ease-in-out;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #FAF6EE;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #FFCB05;
+      border-radius: 4px;
+      border: 2px solid #2B2D42;
+    }
+  </style>
+</head>
+
+<body class="bg-pokeBg text-pokeDark min-h-screen font-sans flex flex-col justify-between selection:bg-pokeYellow selection:text-pokeDark">
+
+  <!-- Toast Notification Bar -->
+  <div id="toast" class="fixed top-5 right-5 z-50 transform translate-y-[-150%] opacity-0 transition-all duration-300 pointer-events-none">
+    <div class="bg-pokeDark text-pokeYellow font-bold px-6 py-3 rounded-2xl shadow-2xl border-3 border-pokeYellow flex items-center gap-3">
+      <i id="toastIcon" class="fa-solid fa-circle-info text-xl"></i>
+      <span id="toastMsg">通知訊息</span>
+    </div>
+  </div>
+
+  <!-- HEADER NAVBAR -->
+  <header class="bg-pokeYellow border-b-4 border-pokeDark px-4 py-3 shadow-md relative z-10">
+    <div class="max-w-6xl mx-auto flex justify-between items-center">
+      
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3 cursor-pointer" onclick="location.reload()">
+        <div class="w-10 h-10 bg-pokeRed rounded-full border-3 border-pokeDark relative flex items-center justify-center shadow-inner">
+          <div class="w-3.5 h-3.5 bg-white rounded-full border-2 border-pokeDark"></div>
+        </div>
+        <div>
+          <h1 class="text-xl md:text-2xl font-black text-pokeDark tracking-wide flex items-center gap-2">
+            雲端心電感應 <span class="text-xs bg-pokeBlue text-white px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">Pokémon Party</span>
+          </h1>
+        </div>
+      </div>
+
+      <!-- Room & Status Display -->
+      <div class="flex items-center gap-2">
+        <div id="headerRoomBadge" class="hidden bg-white border-3 border-pokeDark text-pokeDark px-3 py-1 rounded-xl text-sm font-black items-center gap-2 poke-shadow-sm">
+          <i class="fa-solid fa-house-signal text-pokeBlue"></i>
+          <span>房號: <strong id="displayRoomId" class="text-pokeRed text-base">----</strong></span>
+        </div>
+
+        <button id="copyShareBtn" onclick="copyInviteLink()" class="hidden bg-pokeBlue hover:bg-pokeBlueDark text-white border-3 border-pokeDark px-3 py-1 rounded-xl text-sm font-black shadow transition active:scale-95 items-center gap-1.5">
+          <i class="fa-solid fa-share-nodes"></i>
+          <span class="hidden sm:inline">邀請連結</span>
+        </button>
+
+        <button id="leaveRoomBtn" onclick="leaveRoom()" class="hidden bg-pokeRed hover:bg-red-600 text-white border-3 border-pokeDark px-3 py-1 rounded-xl text-sm font-black shadow transition active:scale-95 items-center gap-1">
+          <i class="fa-solid fa-right-from-bracket"></i>
+          <span class="hidden sm:inline">離開</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- MAIN CONTENT CONTAINER -->
+  <main class="max-w-6xl mx-auto w-full px-4 py-6 flex-grow">
+
+    <!-- LOBBY SCREEN (Screen 1: Room Creation & Joining) -->
+    <section id="lobbyScreen" class="max-w-xl mx-auto my-6">
+      
+      <!-- Pokéball Mascot Banner -->
+      <div class="text-center mb-6">
+        <div class="inline-block p-4 bg-pokeYellow rounded-full border-4 border-pokeDark poke-shadow mb-3 animate-poke-pulse">
+          <i class="fa-solid fa-bolt-lightning text-4xl text-pokeBlue"></i>
+        </div>
+        <h2 class="text-3xl font-black text-pokeDark tracking-wide">默契強者訓練場</h2>
+        <p class="text-sm text-pokeBlueDark font-bold mt-1">創建個人特訓房間（房主）或輸入房號連線答題（玩家）</p>
+      </div>
+
+      <!-- Tab Switcher -->
+      <div class="flex border-4 border-pokeDark rounded-2xl overflow-hidden mb-6 bg-white poke-shadow">
+        <button id="tabJoinBtn" onclick="switchLobbyTab('join')" class="flex-1 py-3 px-4 font-black text-base transition flex items-center justify-center gap-2 bg-pokeYellow text-pokeDark">
+          <i class="fa-solid fa-user-plus"></i>
+          <span>身為玩家：加入房間</span>
+        </button>
+        <button id="tabCreateBtn" onclick="switchLobbyTab('create')" class="flex-1 py-3 px-4 font-black text-base transition flex items-center justify-center gap-2 bg-amber-100 text-amber-800">
+          <i class="fa-solid fa-crown"></i>
+          <span>身為房主：創建房間</span>
+        </button>
+      </div>
+
+      <!-- FORM 1: JOIN ROOM (PLAYER) -->
+      <div id="joinFormPanel" class="bg-pokeBgCard border-4 border-pokeDark rounded-3xl p-6 sm:p-8 poke-shadow">
+        <form onsubmit="handleJoinRoom(event)" class="space-y-5">
+          <div>
+            <label class="block text-sm font-black text-pokeDark mb-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-user text-pokeBlue"></i> 訓練家暱稱 (玩家名稱)
+            </label>
+            <input type="text" id="joinPlayerName" required maxlength="12" placeholder="例如：小智" class="w-full px-4 py-3 bg-white border-3 border-pokeDark rounded-2xl font-bold text-pokeDark focus:outline-none focus:ring-4 focus:ring-pokeYellow">
+          </div>
+
+          <div>
+            <label class="block text-sm font-black text-pokeDark mb-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-key text-pokeRed"></i> 房間代碼 (4位數房號)
+            </label>
+            <input type="text" id="joinRoomId" required maxlength="10" placeholder="例如：7892" class="w-full px-4 py-3 bg-white border-3 border-pokeDark rounded-2xl font-bold text-pokeDark uppercase focus:outline-none focus:ring-4 focus:ring-pokeYellow tracking-wider">
+          </div>
+
+          <button type="submit" class="w-full bg-pokeBlue hover:bg-pokeBlueDark text-white font-black py-4 px-6 rounded-2xl border-3 border-pokeDark poke-shadow-sm hover:translate-x-0.5 hover:translate-y-0.5 transition text-lg flex items-center justify-center gap-2">
+            <span>開始默契對頻 (進入房間)</span>
+            <i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </form>
+      </div>
+
+      <!-- FORM 2: CREATE ROOM (HOST) -->
+      <div id="createFormPanel" class="hidden bg-pokeBgCard border-4 border-pokeDark rounded-3xl p-6 sm:p-8 poke-shadow">
+        <div class="bg-amber-100 border-2 border-pokeDark rounded-2xl p-3 mb-4 text-xs font-bold text-amber-900 flex items-start gap-2">
+          <i class="fa-solid fa-shield-halved text-amber-600 text-base mt-0.5"></i>
+          <span>創房者將取得獨家「房主權杖（HostToken）」，擁有唯一發表題目、翻牌與重置房間的控制權！</span>
+        </div>
+
+        <form onsubmit="handleCreateRoom(event)" class="space-y-5">
+          <div>
+            <label class="block text-sm font-black text-pokeDark mb-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-crown text-pokeYellowDark"></i> 房主暱稱
+            </label>
+            <input type="text" id="createHostName" required maxlength="12" placeholder="例如：大木博士" class="w-full px-4 py-3 bg-white border-3 border-pokeDark rounded-2xl font-bold text-pokeDark focus:outline-none focus:ring-4 focus:ring-pokeYellow">
+          </div>
+
+          <div>
+            <label class="block text-sm font-black text-pokeDark mb-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-dice text-pokeRed"></i> 自動生成專屬房號
+            </label>
+            <div class="flex gap-2">
+              <input type="text" id="createRoomId" readonly required class="flex-grow px-4 py-3 bg-amber-50 border-3 border-pokeDark rounded-2xl font-black text-pokeRed text-xl text-center tracking-widest focus:outline-none">
+              <button type="button" onclick="generateNewRoomCode()" class="bg-pokeYellow hover:bg-yellow-400 border-3 border-pokeDark px-4 py-3 rounded-2xl font-black text-xs flex flex-col items-center justify-center transition active:scale-95 poke-shadow-sm">
+                <i class="fa-solid fa-arrows-rotate text-base mb-0.5"></i>
+                <span>換一個</span>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" class="w-full bg-pokeRed hover:bg-red-600 text-white font-black py-4 px-6 rounded-2xl border-3 border-pokeDark poke-shadow-sm hover:translate-x-0.5 hover:translate-y-0.5 transition text-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span>建立房間並開啟控制台</span>
+          </button>
+        </form>
+      </div>
+
+    </section>
+
+    <!-- GAMEPLAY ROOM SCREEN (Screen 2: Active Gameplay) -->
+    <div id="gameplayScreen" class="hidden space-y-6">
+
+      <!-- HOST CONTROL PANEL CONTAINER (ONLY RENDERED/VISIBLE IF IS_HOST === TRUE) -->
+      <div id="hostPanelWrapper"></div>
+
+      <!-- QUESTION & STATUS BANNER -->
+      <section class="bg-pokeBgCard border-4 border-pokeDark rounded-3xl p-6 text-center poke-shadow relative overflow-hidden">
+        <div class="absolute -right-8 -bottom-8 opacity-10 pointer-events-none">
+          <i class="fa-solid fa-cloud-bolt text-9xl"></i>
+        </div>
+
+        <div class="inline-flex items-center gap-2 bg-pokeYellow border-2 border-pokeDark px-4 py-1 rounded-full font-black text-xs text-pokeDark mb-3">
+          <i class="fa-solid fa-bolt text-pokeBlue"></i>
+          <span>當前默契試題</span>
+        </div>
+
+        <!-- Question Display -->
+        <h2 id="displayQuestionText" class="text-2xl sm:text-3xl font-black text-pokeDark min-h-[48px] flex items-center justify-center">
+          等待房主出題中...
+        </h2>
+
+        <!-- State Badge -->
+        <div class="mt-4 inline-flex items-center gap-2 text-sm font-black px-4 py-1.5 rounded-xl border-2 border-pokeDark bg-white shadow-sm" id="gameStatusBadge">
+          <span class="w-3 h-3 rounded-full bg-amber-400 animate-ping"></span>
+          <span id="gameStatusText">準備階段 (Setup)</span>
+        </div>
+      </section>
+
+      <!-- PLAYER ANSWER INPUT SECTION (Visible for non-host players when status === 'playing') -->
+      <section id="playerAnswerSection" class="hidden bg-white border-4 border-pokeDark rounded-3xl p-5 poke-shadow">
+        <h3 class="font-black text-lg text-pokeDark mb-3 flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-pokeRed"></i>
+          <span>請填寫你的答案 (開牌前他人無法看見)</span>
+        </h3>
+        
+        <form onsubmit="handleAnswerSubmit(event)" class="flex flex-col sm:flex-row gap-3">
+          <input type="text" id="playerAnswerInput" required placeholder="寫下心中的直覺答案..." class="flex-grow px-4 py-3 bg-amber-50 border-3 border-pokeDark rounded-2xl font-bold text-pokeDark focus:outline-none focus:ring-4 focus:ring-pokeYellow">
+          <button type="submit" id="submitAnsBtn" class="bg-pokeRed hover:bg-red-600 text-white font-black px-6 py-3 rounded-2xl border-3 border-pokeDark poke-shadow-sm active:translate-x-0.5 active:translate-y-0.5 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-paper-plane"></i>
+            <span>送出心電感應</span>
+          </button>
+        </form>
+
+        <p id="submittedNotice" class="hidden text-xs text-emerald-700 font-black mt-2 flex items-center gap-1">
+          <i class="fa-solid fa-circle-check text-sm"></i> 答案已成功送出！請等待房主開牌。
+        </p>
+      </section>
+
+      <!-- MATCH DEGREE OVERLAY (Visible when status === 'revealed') -->
+      <section id="matchStatsSection" class="hidden bg-pokeYellow border-4 border-pokeDark rounded-3xl p-4 poke-shadow text-center">
+        <div class="flex items-center justify-center gap-3">
+          <i class="fa-solid fa-wand-magic-sparkles text-2xl text-pokeBlue"></i>
+          <span class="text-xl font-black text-pokeDark" id="matchStatsText">默契指數計算中...</span>
+          <i class="fa-solid fa-wand-magic-sparkles text-2xl text-pokeBlue"></i>
+        </div>
+      </section>
+
+      <!-- 3D CARDS DISPLAY WALL -->
+      <section>
+        <div class="flex justify-between items-center mb-4">
+          <h3 class="font-black text-xl text-pokeDark flex items-center gap-2">
+            <i class="fa-solid fa-users text-pokeBlue"></i>
+            <span>連線中的訓練家 (<span id="playerCountText">0</span>)</span>
+          </h3>
+          <span class="text-xs font-black text-pokeDark bg-pokeYellow border-2 border-pokeDark px-3 py-1 rounded-xl">
+            3D Sync Card
+          </span>
+        </div>
+
+        <!-- Cards Dynamic Grid -->
+        <div id="cardsGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+          <!-- Dynamically injected card items -->
+        </div>
+
+        <!-- Empty State Placeholder -->
+        <div id="emptyState" class="text-center py-12 bg-white/70 border-4 border-dashed border-amber-300 rounded-3xl">
+          <i class="fa-solid fa-ghost text-5xl text-amber-300 mb-3"></i>
+          <p class="font-black text-amber-800">目前尚無訓練家送出心電感應...</p>
+        </div>
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="bg-amber-100 border-t-4 border-pokeDark py-4 px-4 text-center text-xs font-bold text-amber-900 mt-8">
+    <div class="max-w-6xl mx-auto flex flex-col sm:flex-row justify-between items-center gap-2">
+      <p>© 2026 Cloud Telepathy - Pokémon Style Edition</p>
+      <div class="flex items-center gap-4">
+        <span><i class="fa-solid fa-arrows-rotate text-emerald-600 mr-1"></i>Polling Interval: 2s</span>
+        <span><i class="fa-solid fa-database text-pokeBlue mr-1"></i>GAS Connected</span>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JAVASCRIPT CORE LOGIC -->
+  <script>
+    // Mandatory Constants
+    const SHEET_NAME = 'TelepathyData';
+    const GAS_API_URL = "https://script.google.com/macros/s/AKfycbyxFbozZ2bwyziyHMgWCU0xEDKEHE7j-tKADOdTsRN4cidh-bZgeD-W1n3tmdeez-Hb/exec";
+
+    // Application State Variables
+    let currentRoom = "";
+    let playerName = "";
+    let isHost = false;
+    let hostToken = "";
+    let pollTimer = null;
+    let currentAnswers = {};
+    let currentStatus = "setup";
+    let currentQuestion = "";
+    let previousStatus = "";
+
+    // Web Audio Synthesizer (Sound Effects without external files)
+    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    function playSound(type) {
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      const now = audioCtx.currentTime;
+
+      if (type === 'click') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(600, now);
+        osc.frequency.exponentialRampToValueAtTime(300, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+        osc.start(now);
+        osc.stop(now + 0.08);
+      } else if (type === 'submit') {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.setValueAtTime(880, now + 0.1);
+        gain.gain.setValueAtTime(0.25, now);
+        gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.start(now);
+        osc.stop(now + 0.25);
+      } else if (type === 'reveal') {
+        // Multi-frequency chime for 3D flip card reveal
+        [523.25, 659.25, 783.99, 1046.50].forEach((freq, idx) => {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sine';
+          osc.frequency.value = freq;
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          gain.gain.setValueAtTime(0, now + idx * 0.08);
+          gain.gain.linearRampToValueAtTime(0.2, now + idx * 0.08 + 0.02);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.4);
+          osc.start(now + idx * 0.08);
+          osc.stop(now + idx * 0.08 + 0.4);
+        });
+      }
+    }
+
+    // Helper: Toast Notifications
+    function showToast(message, iconClass = "fa-solid fa-circle-info") {
+      const toast = document.getElementById("toast");
+      const msgEl = document.getElementById("toastMsg");
+      const iconEl = document.getElementById("toastIcon");
+
+      msgEl.innerText = message;
+      iconEl.className = iconClass + " text-xl text-pokeYellow";
+
+      toast.classList.remove("translate-y-[-150%]", "opacity-0");
+      toast.classList.add("translate-y-0", "opacity-100");
+
+      setTimeout(() => {
+        toast.classList.remove("translate-y-0", "opacity-100");
+        toast.classList.add("translate-y-[-150%]", "opacity-0");
+      }, 3000);
+    }
+
+    // Initialize Page
+    window.addEventListener("DOMContentLoaded", () => {
+      generateNewRoomCode();
+
+      // Read URL Query Parameters
+      const urlParams = new URLSearchParams(window.location.search);
+      const roomParam = urlParams.get("room");
+      if (roomParam) {
+        document.getElementById("joinRoomId").value = roomParam.trim().toUpperCase();
+        showToast(`載入邀請房號: ${roomParam}`, "fa-solid fa-link");
+      }
+    });
+
+    // Generate 4-Digit Room Code
+    function generateNewRoomCode() {
+      playSound('click');
+      const code = Math.floor(1000 + Math.random() * 9000).toString();
+      document.getElementById("createRoomId").value = code;
+    }
+
+    // Switch Lobby Tabs
+    function switchLobbyTab(tab) {
+      playSound('click');
+      const joinBtn = document.getElementById("tabJoinBtn");
+      const createBtn = document.getElementById("tabCreateBtn");
+      const joinPanel = document.getElementById("joinFormPanel");
+      const createPanel = document.getElementById("createFormPanel");
+
+      if (tab === 'join') {
+        joinBtn.className = "flex-1 py-3 px-4 font-black text-base transition flex items-center justify-center gap-2 bg-pokeYellow text-pokeDark";
+        createBtn.className = "flex-1 py-3 px-4 font-black text-base transition flex items-center justify-center gap-2 bg-amber-100 text-amber-800";
+        joinPanel.classList.remove("hidden");
+        createPanel.classList.add("hidden");
+      } else {
+        createBtn.className = "flex-1 py-3 px-4 font-black text-base transition flex items-center justify-center gap-2 bg-pokeYellow text-pokeDark";
+        joinBtn.className = "flex-1 py-3 px-4 font-black text-base transition flex items-center justify-center gap-2 bg-amber-100 text-amber-800";
+        createPanel.classList.remove("hidden");
+        joinPanel.classList.add("hidden");
+      }
+    }
+
+    // Handle Create Room (Host Entrance)
+    function handleCreateRoom(e) {
+      e.preventDefault();
+      playSound('click');
+
+      const name = document.getElementById("createHostName").value.trim();
+      const room = document.getElementById("createRoomId").value.trim().toUpperCase();
+
+      if (!name || !room) {
+        showToast("請輸入暱稱與房號", "fa-solid fa-triangle-exclamation");
+        return;
+      }
+
+      playerName = name;
+      currentRoom = room;
+      isHost = true;
+
+      // Generate hostToken and save to localStorage
+      hostToken = 'HOST-' + Math.random().toString(36).substring(2, 10).toUpperCase();
+      localStorage.setItem(`telepathy_host_token_${currentRoom}`, hostToken);
+
+      enterGameRoom();
+    }
+
+    // Handle Join Room (Player Entrance)
+    function handleJoinRoom(e) {
+      e.preventDefault();
+      playSound('click');
+
+      const name = document.getElementById("joinPlayerName").value.trim();
+      const room = document.getElementById("joinRoomId").value.trim().toUpperCase();
+
+      if (!name || !room) {
+        showToast("請輸入暱稱與房號", "fa-solid fa-triangle-exclamation");
+        return;
+      }
+
+      playerName = name;
+      currentRoom = room;
+
+      // Check if user is host from localStorage for this room
+      const savedToken = localStorage.getItem(`telepathy_host_token_${currentRoom}`);
+      if (savedToken) {
+        isHost = true;
+        hostToken = savedToken;
+      } else {
+        isHost = false;
+        hostToken = "";
+      }
+
+      enterGameRoom();
+    }
+
+    // Enter Game Room & Setup UI
+    function enterGameRoom() {
+      document.getElementById("lobbyScreen").classList.add("hidden");
+      document.getElementById("gameplayScreen").classList.remove("hidden");
+
+      // Update Header Badges & Buttons
+      document.getElementById("displayRoomId").innerText = currentRoom;
+      document.getElementById("headerRoomBadge").classList.remove("hidden");
+      document.getElementById("headerRoomBadge").classList.add("flex");
+      document.getElementById("copyShareBtn").classList.remove("hidden");
+      document.getElementById("copyShareBtn").classList.add("flex");
+      document.getElementById("leaveRoomBtn").classList.remove("hidden");
+      document.getElementById("leaveRoomBtn").classList.add("flex");
+
+      // STRICT SECURITY STEP: Render Host Panel ONLY IF isHost === true
+      const hostWrapper = document.getElementById("hostPanelWrapper");
+      if (isHost) {
+        hostWrapper.innerHTML = `
+          <section id="hostControlConsole" class="bg-pokeYellow border-4 border-pokeDark rounded-3xl p-5 poke-shadow mb-6">
+            <div class="flex items-center justify-between border-b-2 border-pokeDark pb-3 mb-4">
+              <div class="flex items-center gap-2">
+                <span class="bg-pokeRed text-white text-xs px-3 py-1 rounded-full font-black border border-pokeDark uppercase tracking-wider">
+                  <i class="fa-solid fa-crown text-yellow-300 mr-1"></i>Host Master
+                </span>
+                <h3 class="font-black text-lg text-pokeDark">房主出題控制台</h3>
+              </div>
+              <span class="text-xs font-black text-pokeBlueDark"><i class="fa-solid fa-user-shield mr-1"></i>最高控制權權限鍵</span>
+            </div>
+
+            <div class="space-y-4">
+              <div>
+                <label class="block text-xs font-black text-pokeDark mb-1">設定默契題目：</label>
+                <div class="flex gap-2 flex-col sm:flex-row">
+                  <input type="text" id="hostQuestionInput" placeholder="例如：想到黃色的寶可夢你會想到什麼？" class="flex-grow px-4 py-2.5 bg-white border-3 border-pokeDark rounded-2xl font-bold text-pokeDark focus:outline-none focus:ring-4 focus:ring-pokeBlue">
+                  <button onclick="hostPublishQuestion()" class="bg-pokeBlue hover:bg-pokeBlueDark text-white font-black px-5 py-2.5 rounded-2xl border-3 border-pokeDark shadow active:scale-95 transition flex items-center justify-center gap-2 whitespace-nowrap">
+                    <i class="fa-solid fa-bullhorn"></i>
+                    <span>發布題目</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="flex flex-wrap gap-3 pt-1">
+                <button onclick="hostRevealCards()" class="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-black py-3 px-4 rounded-2xl border-3 border-pokeDark shadow active:scale-95 transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-eye text-lg"></i>
+                  <span>全員開牌 (3D Reveal)</span>
+                </button>
+                <button onclick="hostResetRoom()" class="bg-rose-100 hover:bg-rose-200 text-rose-800 font-black py-3 px-4 rounded-2xl border-3 border-pokeDark shadow active:scale-95 transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-rotate-left"></i>
+                  <span>重置房間 (Reset)</span>
+                </button>
+              </div>
+            </div>
+          </section>
+        `;
+        showToast(`歡迎房主 ${playerName}！控制台已載入。`, "fa-solid fa-crown");
+      } else {
+        // Completely clear wrapper to ensure DOM does NOT contain host controls
+        hostWrapper.innerHTML = "";
+        showToast(`歡迎玩家 ${playerName} 加入房間！`, "fa-solid fa-right-to-bracket");
+      }
+
+      // Fetch immediately & start 2000ms polling
+      fetchRoomData();
+      startPolling();
+    }
+
+    // Leave Room
+    function leaveRoom() {
+      playSound('click');
+      if (pollTimer) clearInterval(pollTimer);
+      location.reload();
+    }
+
+    // Copy Invite URL
+    function copyInviteLink() {
+      playSound('click');
+      const url = new URL(window.location.href);
+      url.searchParams.set("room", currentRoom);
+
+      const shareUrl = url.toString();
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(() => {
+          showToast("已複製邀請連結！", "fa-solid fa-copy");
+        }).catch(() => fallbackCopy(shareUrl));
+      } else {
+        fallbackCopy(shareUrl);
+      }
+    }
+
+    function fallbackCopy(text) {
+      const textArea = document.createElement("textarea");
+      textArea.value = text;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+      showToast("已複製邀請連結！", "fa-solid fa-copy");
+    }
+
+    // GAS API POST Communication
+    async function sendGasPost(actionData) {
+      try {
+        const payload = {
+          room: currentRoom,
+          playerName: playerName,
+          hostToken: hostToken,
+          ...actionData
+        };
+
+        const res = await fetch(GAS_API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "text/plain;charset=utf-8" },
+          body: JSON.stringify(payload)
+        });
+
+        return await res.json();
+      } catch (err) {
+        console.error("GAS API Error:", err);
+      }
+    }
+
+    // Host Functions
+    async function hostPublishQuestion() {
+      playSound('click');
+      const qInput = document.getElementById("hostQuestionInput").value.trim();
+      if (!qInput) {
+        showToast("請輸入題目內容！", "fa-solid fa-triangle-exclamation");
+        return;
+      }
+      showToast("發布題目中...", "fa-solid fa-paper-plane");
+      await sendGasPost({ action: "set_question", question: qInput });
+      document.getElementById("hostQuestionInput").value = "";
+      fetchRoomData();
+    }
+
+    async function hostRevealCards() {
+      playSound('click');
+      showToast("開牌指令發送中！全員翻牌！", "fa-solid fa-wand-magic-sparkles");
+      await sendGasPost({ action: "reveal" });
+      fetchRoomData();
+    }
+
+    async function hostResetRoom() {
+      playSound('click');
+      showToast("正在重置房間...", "fa-solid fa-arrows-rotate");
+      await sendGasPost({ action: "reset" });
+      fetchRoomData();
+    }
+
+    // Player Submit Answer
+    async function handleAnswerSubmit(e) {
+      e.preventDefault();
+      playSound('submit');
+
+      const ansInput = document.getElementById("playerAnswerInput").value.trim();
+      if (!ansInput) return;
+
+      showToast("答案提交中...", "fa-solid fa-spinner");
+      await sendGasPost({ action: "submit_answer", answer: ansInput });
+
+      document.getElementById("submittedNotice").classList.remove("hidden");
+      showToast("答案提交成功！請等待開牌", "fa-solid fa-circle-check");
+      fetchRoomData();
+    }
+
+    // Polling System (Every 2000ms)
+    function startPolling() {
+      if (pollTimer) clearInterval(pollTimer);
+      pollTimer = setInterval(fetchRoomData, 2000);
+    }
+
+    // Fetch Room Data (GET)
+    async function fetchRoomData() {
+      if (!currentRoom) return;
+
+      try {
+        const response = await fetch(`${GAS_API_URL}?room=${encodeURIComponent(currentRoom)}`);
+        const data = await response.json();
+
+        const newStatus = data.status || "setup";
+        const newQuestion = data.question || "";
+        const newAnswers = data.answers || {};
+
+        // Sound trigger when status shifts to revealed
+        if (newStatus === "revealed" && previousStatus !== "revealed") {
+          playSound('reveal');
+        }
+        previousStatus = newStatus;
+
+        currentStatus = newStatus;
+        currentQuestion = newQuestion;
+        currentAnswers = newAnswers;
+
+        updateUI();
+      } catch (err) {
+        console.error("Polling Fetch Error:", err);
+      }
+    }
+
+    // Update Interface State
+    function updateUI() {
+      // 1. Question Text
+      const qText = document.getElementById("displayQuestionText");
+      if (currentStatus === "setup") {
+        qText.innerText = "等待房主出題中...";
+      } else {
+        qText.innerText = currentQuestion || "等待房主設定題目...";
+      }
+
+      // 2. Status Badge
+      const statusText = document.getElementById("gameStatusText");
+      const statusBadge = document.getElementById("gameStatusBadge");
+
+      if (currentStatus === "setup") {
+        statusText.innerText = "準備出題中 (Setup)";
+        statusBadge.className = "mt-4 inline-flex items-center gap-2 text-sm font-black px-4 py-1.5 rounded-xl border-2 border-pokeDark bg-white text-pokeDark";
+      } else if (currentStatus === "playing") {
+        statusText.innerText = "玩家作答中 (Playing)";
+        statusBadge.className = "mt-4 inline-flex items-center gap-2 text-sm font-black px-4 py-1.5 rounded-xl border-2 border-pokeDark bg-pokeYellow text-pokeDark";
+      } else if (currentStatus === "revealed") {
+        statusText.innerText = "已全網開牌 (Revealed)";
+        statusBadge.className = "mt-4 inline-flex items-center gap-2 text-sm font-black px-4 py-1.5 rounded-xl border-2 border-pokeDark bg-emerald-400 text-emerald-950";
+      }
+
+      // 3. Player Answer Input Section
+      const answerSection = document.getElementById("playerAnswerSection");
+      const submittedNotice = document.getElementById("submittedNotice");
+
+      if (currentStatus === "playing") {
+        answerSection.classList.remove("hidden");
+        if (currentAnswers[playerName]) {
+          submittedNotice.classList.remove("hidden");
+        } else {
+          submittedNotice.classList.add("hidden");
+        }
+      } else {
+        answerSection.classList.add("hidden");
+      }
+
+      // 4. Render 3D Cards Grid
+      renderCards();
+
+      // 5. Calculate Match Percentage
+      renderMatchStats();
+    }
+
+    // Render 3D Flip Cards Grid
+    function renderCards() {
+      const grid = document.getElementById("cardsGrid");
+      const emptyState = document.getElementById("emptyState");
+      const countEl = document.getElementById("playerCountText");
+
+      const playerNames = Object.keys(currentAnswers);
+      countEl.innerText = playerNames.length;
+
+      if (playerNames.length === 0) {
+        grid.innerHTML = "";
+        emptyState.classList.remove("hidden");
+        return;
+      }
+
+      emptyState.classList.add("hidden");
+
+      let html = "";
+      playerNames.forEach(name => {
+        const answer = currentAnswers[name];
+        const isSelf = (name === playerName);
+        const isFlipped = (currentStatus === "revealed");
+
+        html += `
+          <div class="card-scene">
+            <div class="card-object ${isFlipped ? 'is-flipped' : ''}">
+              
+              <!-- CARD BACK (Unrevealed Pokéball Theme) -->
+              <div class="card-face card-face-back flex flex-col justify-between p-4 relative overflow-hidden">
+                <!-- Top Info -->
+                <div class="flex justify-between items-center z-10">
+                  <span class="bg-pokeDark text-pokeYellow text-xs px-2.5 py-1 rounded-full font-black border border-amber-300 truncate max-w-[120px]">
+                    ${isSelf ? '<i class="fa-solid fa-star text-yellow-300 mr-1"></i>你' : '<i class="fa-solid fa-user mr-1"></i>' + escapeHtml(name)}
+                  </span>
+                  <span class="bg-white text-pokeDark text-[10px] px-2 py-0.5 rounded-md font-black border border-pokeDark">
+                    已鎖定
+                  </span>
+                </div>
+
+                <!-- Pokéball Center Button -->
+                <div class="pokeball-center-btn"></div>
+
+                <!-- Bottom Status -->
+                <div class="text-center z-10 mt-auto">
+                  <div class="inline-block bg-white border-2 border-pokeDark rounded-xl px-3 py-1 text-xs font-black text-pokeDark shadow">
+                    <i class="fa-solid fa-bolt text-pokeYellow mr-1 animate-pulse"></i> 感應思考中...
+                  </div>
+                </div>
+              </div>
+
+              <!-- CARD FRONT (Revealed Front Side) -->
+              <div class="card-face card-face-front flex flex-col justify-between p-4 relative overflow-hidden">
+                <!-- Top Header -->
+                <div class="flex justify-between items-center border-b-2 border-amber-200 pb-2">
+                  <span class="font-black text-sm text-pokeDark flex items-center gap-1 truncate max-w-[140px]">
+                    ${isSelf ? '<i class="fa-solid fa-user-astronaut text-pokeRed"></i>' : '<i class="fa-solid fa-user text-pokeBlue"></i>'}
+                    ${escapeHtml(name)}
+                  </span>
+                  <span class="text-[10px] bg-pokeYellow text-pokeDark border border-pokeDark px-2 py-0.5 rounded-md font-black">
+                    ${isSelf ? '你的卡片' : '成員答案'}
+                  </span>
+                </div>
+
+                <!-- Revealed Answer Text -->
+                <div class="my-auto text-center py-2 px-1">
+                  <p class="text-[11px] text-pokeBlue font-black mb-1 uppercase tracking-wider">心電回答</p>
+                  <h4 class="text-xl sm:text-2xl font-black text-pokeDark break-words leading-tight">
+                    ${escapeHtml(answer)}
+                  </h4>
+                </div>
+
+                <!-- Card Footer -->
+                <div class="border-t-2 border-amber-200 pt-2 flex justify-between items-center text-[10px] font-black text-pokeBlueDark">
+                  <span><i class="fa-solid fa-check text-emerald-600 mr-0.5"></i> 已解鎖</span>
+                  <span>Pokémon Sync</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        `;
+      });
+
+      grid.innerHTML = html;
+    }
+
+    // Calculate Tacit Agreement Rating
+    function renderMatchStats() {
+      const statsSection = document.getElementById("matchStatsSection");
+      const statsText = document.getElementById("matchStatsText");
+
+      if (currentStatus !== "revealed") {
+        statsSection.classList.add("hidden");
+        return;
+      }
+
+      const answersList = Object.values(currentAnswers).map(a => a.trim().toLowerCase());
+      if (answersList.length < 2) {
+        statsSection.classList.remove("hidden");
+        statsText.innerText = "人數不足兩人，邀請更多訓練家參加連線吧！";
+        return;
+      }
+
+      // Group answers frequency
+      const counts = {};
+      let maxCount = 0;
+      let mostCommonAns = "";
+
+      answersList.forEach(ans => {
+        counts[ans] = (counts[ans] || 0) + 1;
+        if (counts[ans] > maxCount) {
+          maxCount = counts[ans];
+          mostCommonAns = ans;
+        }
+      });
+
+      const total = answersList.length;
+      const matchPercentage = Math.round((maxCount / total) * 100);
+
+      statsSection.classList.remove("hidden");
+
+      if (matchPercentage === 100) {
+        statsText.innerHTML = `🌟 100% 絕佳默契！全員同步選了「<span class="text-pokeRed font-black underline">${escapeHtml(mostCommonAns)}</span>」！`;
+      } else if (matchPercentage >= 50) {
+        statsText.innerHTML = `⚡ 默契指數 ${matchPercentage}%！共有 ${maxCount} 人心有靈犀一致！`;
+      } else {
+        statsText.innerHTML = `🌀 默契指數 ${matchPercentage}% ~ 訓練家們的想法真是千奇百怪！`;
+      }
+    }
+
+    // Utility: HTML Escaping
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
